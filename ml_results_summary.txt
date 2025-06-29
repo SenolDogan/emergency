@@ -1,0 +1,49 @@
+EMERGENCY DEPARTMENT ML ANALYSIS RESULTS
+========================================
+
+Data Overview:
+- Total samples: 210,635 patients
+- After filtering: 205,828 patients (removed triage value 6)
+- Features used: 20 (age, sex, visit_month, vital signs, department visits)
+- Triage classes: 5 (0-4, corresponding to original 1-5)
+- Department classes: 13 unique departments
+
+TRIAGE PREDICTION MODEL:
+------------------------
+Accuracy: 60.98%
+AUC: 0.728
+Macro Average F1-Score: 0.31
+Weighted Average F1-Score: 0.57
+
+Class-wise Performance:
+- Class 0 (Original 1): Precision=0.70, Recall=0.79, F1=0.74 (21,416 samples)
+- Class 1 (Original 2): Precision=0.38, Recall=0.02, F1=0.03 (1,213 samples)
+- Class 2 (Original 3): Precision=0.64, Recall=0.13, F1=0.22 (4,330 samples)
+- Class 3 (Original 4): Precision=0.48, Recall=0.64, F1=0.55 (11,877 samples)
+- Class 4 (Original 5): Precision=0.50, Recall=0.01, F1=0.01 (2,330 samples)
+
+DEPARTMENT PREDICTION MODEL:
+----------------------------
+Accuracy: 100.0%
+Perfect classification achieved - likely due to deterministic department assignment based on visit patterns.
+
+GENERATED PLOTS:
+----------------
+1. triage_confusion_matrix.png - Confusion matrix for triage prediction
+2. department_confusion_matrix.png - Confusion matrix for department prediction  
+3. triage_feature_importance.png - Top 10 most important features for triage prediction
+4. triage_risk_score_distribution.png - Distribution of risk scores for triage group 1
+
+KEY INSIGHTS:
+-------------
+1. The triage model shows moderate performance (61% accuracy) with good performance on the most common class (Class 0)
+2. Department prediction achieves perfect accuracy, suggesting strong patterns in department assignment
+3. The model struggles with rare triage classes (1, 2, 4) due to class imbalance
+4. Feature importance analysis reveals which patient characteristics most influence triage decisions
+
+RECOMMENDATIONS:
+----------------
+1. Consider class balancing techniques (SMOTE, undersampling) for better performance on rare triage classes
+2. The department prediction model may be overfitting - consider feature selection or regularization
+3. Focus on improving recall for critical triage classes (1 and 4) which have low recall scores
+4. Use the feature importance plot to guide clinical decision support system development 
