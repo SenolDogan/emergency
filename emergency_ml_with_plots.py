@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, accuracy_score
-from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, accuracy_score, roc_curve, auc
+from sklearn.preprocessing import LabelEncoder, label_binarize
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -202,6 +202,28 @@ plt.xlabel('Risk Score (Probability)')
 plt.ylabel('Number of Patients')
 plt.legend()
 plt.savefig('triage_risk_score_all_groups.png')
+plt.close()
+
+# ROC Curve for each triage group (English labels)
+n_classes = 5
+# y_triage_test is already 0-4, y_triage_proba is the probability output
+# Binarize the test labels
+triage_test_bin = label_binarize(y_triage_test, classes=[0,1,2,3,4])
+plt.figure(figsize=(8,6))
+roc_colors = ['red', 'orange', 'yellow', 'green', 'blue']
+for i in range(n_classes):
+    fpr, tpr, _ = roc_curve(triage_test_bin[:, i], y_triage_proba[:, i])
+    roc_auc = auc(fpr, tpr)
+    plt.plot(fpr, tpr, color=roc_colors[i], lw=2, label=f'Triage {i+1} (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], 'k--', lw=2)
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curves for Triage Groups')
+plt.legend(loc='lower right')
+plt.tight_layout()
+plt.savefig('triage_roc_curves_en.png')
 plt.close()
 
 print('All ML evaluation plots have been saved as PNG files in the current directory.') 
