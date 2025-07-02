@@ -46,10 +46,13 @@ load('data-aktin.RData')
 
 # Male Age Distribution
 male_age <- read_excel(excel_file, sheet = "Male_Age_Distribution")
+if(!"percentage" %in% colnames(male_age)) {
+  male_age$percentage <- round(100 * male_age$count / sum(male_age$count), 2)
+}
 png("male_age_distribution.png", width=800, height=500)
 ggplot(male_age, aes(x=age_group, y=count, fill=age_group)) +
   geom_bar(stat="identity") +
-  geom_text(aes(label=paste0(count, "\n(", percentage, "%)")), vjust=-0.5, size=4) +
+  geom_text(aes(label=paste0(count, " (", percentage, "%)")), vjust=-0.5, size=4) +
   scale_fill_brewer(palette="Blues") +
   theme_minimal() +
   labs(title="Male Patients Age Distribution", x="Age Group", y="Number of Patients", fill="Age Group") +
@@ -58,10 +61,13 @@ dev.off()
 
 # Female Age Distribution
 female_age <- read_excel(excel_file, sheet = "Female_Age_Distribution")
+if(!"percentage" %in% colnames(female_age)) {
+  female_age$percentage <- round(100 * female_age$count / sum(female_age$count), 2)
+}
 png("female_age_distribution.png", width=800, height=500)
 ggplot(female_age, aes(x=age_group, y=count, fill=age_group)) +
   geom_bar(stat="identity") +
-  geom_text(aes(label=paste0(count, "\n(", percentage, "%)")), vjust=-0.5, size=4) +
+  geom_text(aes(label=paste0(count, " (", percentage, "%)")), vjust=-0.5, size=4) +
   scale_fill_brewer(palette="Reds") +
   theme_minimal() +
   labs(title="Female Patients Age Distribution", x="Age Group", y="Number of Patients", fill="Age Group") +
@@ -84,7 +90,7 @@ male_triage <- male_patients %>%
 png("male_triage_distribution.png", width=800, height=500)
 ggplot(male_triage, aes(x=triage_label, y=count, fill=triage_label)) +
   geom_bar(stat="identity") +
-  geom_text(aes(label=paste0(count, "\n(", percentage, "%)")), vjust=-0.5, size=4) +
+  geom_text(aes(label=paste0(count, " (", percentage, "%)")), vjust=-0.5, size=4) +
   scale_fill_manual(values=c("ROT"="#FF0000", "ORANGE"="#FFA500", "GELB"="#FFFF00", "GRÜN"="#00FF00", "BLAU"="#0000FF")) +
   theme_minimal() +
   labs(title="Male Patients Triage Distribution", x="Triage Code", y="Number of Patients", fill="Triage") +
@@ -99,10 +105,15 @@ male_age_triage_long <- male_patients %>%
   group_by(age_group, triage_label) %>%
   summarise(count = n(), .groups = 'drop')
 
+# Calculate percentage by age_group
+total_by_age <- male_age_triage_long %>% group_by(age_group) %>% summarise(total=sum(count))
+male_age_triage_long <- left_join(male_age_triage_long, total_by_age, by="age_group")
+male_age_triage_long$percentage <- round(100 * male_age_triage_long$count / male_age_triage_long$total, 1)
+
 png("male_age_triage_heatmap.png", width=1000, height=600)
 ggplot(male_age_triage_long, aes(x=triage_label, y=age_group, fill=count)) +
   geom_tile(color="white") +
-  geom_text(aes(label=count), color="black", size=4) +
+  geom_text(aes(label=ifelse(count>0, paste0(count, "\n(", percentage, "%)"), "")), color="black", size=4) +
   scale_fill_gradient(low="#E3F2FD", high="#1976D2") +
   theme_minimal() +
   labs(title="Male Patients: Age-Triage Cross Table", x="Triage Code", y="Age Group", fill="Number of Patients")
@@ -122,7 +133,7 @@ female_triage <- female_patients %>%
 png("female_triage_distribution.png", width=800, height=500)
 ggplot(female_triage, aes(x=triage_label, y=count, fill=triage_label)) +
   geom_bar(stat="identity") +
-  geom_text(aes(label=paste0(count, "\n(", percentage, "%)")), vjust=-0.5, size=4) +
+  geom_text(aes(label=paste0(count, " (", percentage, "%)")), vjust=-0.5, size=4) +
   scale_fill_manual(values=c("ROT"="#FF0000", "ORANGE"="#FFA500", "GELB"="#FFFF00", "GRÜN"="#00FF00", "BLAU"="#0000FF")) +
   theme_minimal() +
   labs(title="Female Patients Triage Distribution", x="Triage Code", y="Number of Patients", fill="Triage") +
@@ -146,10 +157,15 @@ female_age_triage_long <- female_patients %>%
   group_by(age_group, triage_label) %>%
   summarise(count = n(), .groups = 'drop')
 
+# Calculate percentage by age_group
+total_by_age_f <- female_age_triage_long %>% group_by(age_group) %>% summarise(total=sum(count))
+female_age_triage_long <- left_join(female_age_triage_long, total_by_age_f, by="age_group")
+female_age_triage_long$percentage <- round(100 * female_age_triage_long$count / female_age_triage_long$total, 1)
+
 png("female_age_triage_heatmap.png", width=1000, height=600)
 ggplot(female_age_triage_long, aes(x=triage_label, y=age_group, fill=count)) +
   geom_tile(color="white") +
-  geom_text(aes(label=count), color="black", size=4) +
+  geom_text(aes(label=ifelse(count>0, paste0(count, "\n(", percentage, "%)"), "")), color="black", size=4) +
   scale_fill_gradient(low="#FFEBEE", high="#D32F2F") +
   theme_minimal() +
   labs(title="Female Patients: Age-Triage Cross Table", x="Triage Code", y="Age Group", fill="Number of Patients")
@@ -468,30 +484,46 @@ triage_summary <- merge(
   all.x=TRUE
 )
 triage_summary$total_count[is.na(triage_summary$total_count)] <- 0
+triage_total <- sum(triage_summary$total_count)
+triage_perc <- round(100 * triage_summary$total_count / triage_total, 1)
 pie_colors <- triage_colors[triage_summary$triage_label]
-pie_labels <- paste(triage_summary$triage_label, "\n", triage_summary$total_count, " patients")
+pie_labels <- paste0(triage_summary$triage_label, "\n", triage_summary$total_count, " (", triage_perc, "%)")
 pie(triage_summary$total_count, labels=pie_labels, col=pie_colors, main="Triage Distribution (All Groups)")
 
 # 2. Gender Distribution
+male_count <- sum(male_age$count)
+female_count <- sum(female_age$count)
 gender_summary <- data.frame(
   Gender = c("Male", "Female"),
-  Count = c(sum(male_age$count), sum(female_age$count))
+  Count = c(male_count, female_count)
 )
-barplot(gender_summary$Count, names.arg=gender_summary$Gender, 
-        col=c("#1976D2", "#D32F2F"), main="Gender Distribution")
+gender_total <- sum(gender_summary$Count)
+gender_perc <- round(100 * gender_summary$Count / gender_total, 1)
+bp_gender <- barplot(gender_summary$Count, names.arg=gender_summary$Gender, 
+        col=c("#1976D2", "#D32F2F"), main="Gender Distribution", ylim=c(0, max(gender_summary$Count)*1.2))
+text(x=bp_gender, y=gender_summary$Count, 
+     labels=paste0(gender_summary$Count, " (", gender_perc, "%)"), pos=3, cex=1.2, col="black")
 
 # 3. Monthly Trend (All Years Combined, by Month Name)
 monthly_trend_data <- read_excel(excel_file, sheet = "Monthly_Patients_By_Month")
 monthly_trend_data$visit_month_only <- factor(monthly_trend_data$visit_month_only, levels=month.name)
-barplot(monthly_trend_data$total_patients, names.arg=monthly_trend_data$visit_month_only, col="#1976D2",
-        main="Monthly Trend (All Years Combined)", xlab="Month", ylab="Total Number of Patients", las=2)
+monthly_total <- sum(monthly_trend_data$total_patients)
+monthly_perc <- round(100 * monthly_trend_data$total_patients / monthly_total, 1)
+bp_month <- barplot(monthly_trend_data$total_patients, names.arg=monthly_trend_data$visit_month_only, col="#1976D2",
+        main="Monthly Trend (All Years Combined)", xlab="Month", ylab="Total Number of Patients", las=2, ylim=c(0, max(monthly_trend_data$total_patients)*1.2))
+text(x=bp_month, y=monthly_trend_data$total_patients, 
+     labels=paste0(monthly_trend_data$total_patients, " (", monthly_perc, "%)"), pos=3, cex=0.9, col="black", srt=90, offset=0.5)
 
 # 4. Age Distribution (Barplot)
 age_summary <- rbind(male_age, female_age) %>%
   group_by(age_group) %>%
   summarise(total_count = sum(count))
-barplot(age_summary$total_count, names.arg=age_summary$age_group,
-        col="#4CAF50", main="Age Distribution", ylab="Number of Patients", xlab="Age Group")
+age_total <- sum(age_summary$total_count)
+age_perc <- round(100 * age_summary$total_count / age_total, 1)
+bp_age <- barplot(age_summary$total_count, names.arg=age_summary$age_group,
+        col="#4CAF50", main="Age Distribution", ylab="Number of Patients", xlab="Age Group", ylim=c(0, max(age_summary$total_count)*1.2))
+text(x=bp_age, y=age_summary$total_count, 
+     labels=paste0(age_summary$total_count, " (", age_perc, "%)"), pos=3, cex=0.9, col="black", srt=90, offset=0.5)
 
 # 5. Top 5 Most Visited Imaging Departments (Barplot, data.aktin'den, sadece NA olmayan tarihleri say)
 visit_counts <- sapply(imaging_depts, function(col) sum(!is.na(data.aktin[[col]])))
@@ -499,8 +531,10 @@ visit_df <- data.frame(department=names(visit_counts), visits=as.numeric(visit_c
 visit_df$department <- imaging_dept_names[visit_df$department]
 visit_df <- visit_df[order(-visit_df$visits), ]
 visit_df <- head(visit_df, 5)
-bp <- barplot(visit_df$visits, names.arg=visit_df$department, col="#FF9800", main="Top 5 Most Visited Imaging Departments", las=2, ylab="Number of Visits", xlab="Department")
-text(x=bp, y=visit_df$visits, labels=visit_df$visits, pos=3, cex=1.2, col="black")
+visit_total <- sum(visit_df$visits)
+visit_perc <- round(100 * visit_df$visits / visit_total, 1)
+bp <- barplot(visit_df$visits, names.arg=visit_df$department, col="#FF9800", main="Top 5 Most Visited Imaging Departments", las=2, ylab="Number of Visits", xlab="Department", ylim=c(0, max(visit_df$visits)*1.2))
+text(x=bp, y=visit_df$visits, labels=paste0(visit_df$visits, " (", visit_perc, "%)"), pos=3, cex=1.1, col="black", srt=90, offset=0.5)
 
 # 6. panel: boş bırak
 plot.new()
